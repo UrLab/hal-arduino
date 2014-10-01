@@ -73,4 +73,34 @@ class Sensor : public Resource {
         unsigned int getValue() const;
 };
 
+
+#define HAL_CREATE(name, sensors, triggers, switchs, anims)\
+HAL name(sizeof(sensors)/sizeof(Sensor), sensors,\
+    sizeof(triggers)/sizeof(Trigger), triggers,\
+    sizeof(switchs)/sizeof(Switch), switchs,\
+    sizeof(anims)/sizeof(Animation), anims)
+
+class HAL {
+    private:
+        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS;
+        Sensor *sensors;
+        Trigger *triggers;
+        Switch *switchs;
+        Animation *animations;
+        unsigned long int now=0, last_com=0, last_ping=0, lag=0;
+        int j;
+        unsigned char c, d, e;
+        void com();
+    public:
+        HAL(
+            size_t n_sens, Sensor *sens,
+            size_t n_trigs, Trigger *trigs,
+            size_t n_switchs, Switch *sw,
+            size_t n_anim, Animation *anims
+        );
+        void setup();
+        void loop();
+        bool ping_timeout() const;
+};
+
 #endif
