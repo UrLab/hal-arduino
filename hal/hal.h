@@ -87,7 +87,7 @@ class HAL {
         Trigger *triggers;
         Switch *switchs;
         Animation *animations;
-        unsigned long int now=0, last_com=0, last_ping=0, lag=0;
+        unsigned long int now, last_com, last_ping, lag;
         int j;
         unsigned char c, d, e;
         void com();
