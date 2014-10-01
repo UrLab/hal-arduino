@@ -5,7 +5,7 @@ HAL::HAL(
     size_t n_trig, Trigger *trig,
     size_t n_switch, Switch *sw,
     size_t n_anim, Animation *anim
-) : 
+) :
     N_SENSORS(n_sens), N_TRIGGERS(n_trig), N_SWITCHS(n_switch), 
     N_ANIMATIONS(n_anim), sensors(sens), triggers(trig), switchs(sw),
     animations(anim), now(0), last_com(0), last_ping(0), lag(0), j(0), c(0), 
@@ -49,9 +49,14 @@ void HAL::loop()
         switchs[i].writeVal();
 }
 
+long unsigned int HAL::last_com_delay() const
+{
+    return millis() - last_com;
+}
+
 bool HAL::ping_timeout() const
 {
-    return now - last_com > 2500;
+    return (last_com_delay() > 2500);
 }
 
 void HAL::com()
