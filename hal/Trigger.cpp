@@ -37,13 +37,13 @@ void Trigger::hit(int state)
 {
     if (state == _active_state && _cursor < _state_count){
         _cursor++;
-        if (_cursor == _state_count){
+        if (_cursor == _state_count && ! _active){
             _active = true;
             notification("1");
         }
     } else if (state != _active_state && _cursor > 0){
         _cursor--;
-        if (_cursor == 0){
+        if (_cursor == 0 && _active){
             _active = false;
             notification("0");
         }
