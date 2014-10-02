@@ -15,17 +15,22 @@ class Resource {
         int pin() const;
 };
 
-#define TRIGGER_AFTER 1000
-
 class Trigger : public Resource {
     private:
         const int _active_state; 
-        int _count_active, _count_inactive;
+        bool _active;
+        unsigned int _cursor, _state_count;
     public:
-        explicit Trigger(const char *name, int pin, int active_state=HIGH);
+        explicit Trigger(
+            const char *name,
+            int pin,
+            int active_state=HIGH,
+            unsigned int state_count=250
+        );
         bool isActive() const;
         void check();
         void hit(int state);
+        void notification(const char *state);
 };
 
 class Switch : public Resource {
