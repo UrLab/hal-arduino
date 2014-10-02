@@ -106,6 +106,7 @@ class HAL {
         void setup();
         void loop();
         bool ping_timeout() const;
+        unsigned long int last_com_delay() const;
 };
 
 #endif
