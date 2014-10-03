@@ -1,5 +1,18 @@
 #include "hal.h"
 
+#define VERSION_STR "?0123456789abcdef0123456789abcdef01234567"
+
+static inline unsigned char HALMsg_checksum(HALMsg *msg)
+{
+    unsigned char res = 0;
+    res += msg->cmd;
+    res += msg->rid;
+    res += msg->len;
+    for (unsigned char i=0; i<msg->len; i++)
+        res += msg->data[i];
+    return res;
+}
+
 HAL::HAL(
     size_t n_sens, Sensor *sens,
     size_t n_trig, Trigger *trig,
@@ -59,152 +72,139 @@ bool HAL::ping_timeout() const
     return (last_com_delay() > 2500);
 }
 
-void HAL::com()
+void HAL::tree()
 {
-    c = Serial.read();
+    size_t l;
+    msg.cmd = TREE;
 
-    switch (c){
-        /* Ping */
-        case '*':
-            lag = now - last_ping;
-            break;
-
-        /* Ask version */
-        case '?':
-            Serial.println("?0123456789abcdef0123456789abcdef01234567");
-            break;
-
-        /* Ask Resources */
-        case '$':
-            Serial.print("$A");
-            Serial.println(N_ANIMATIONS, DEC);
-            for (int i=0; i<N_ANIMATIONS; i++){
-                Serial.print("$");
-                Serial.println(animations[i].name());
-            }
-
-            Serial.print("$T");
-            Serial.println(N_TRIGGERS, DEC);
-            for (int i=0; i<N_TRIGGERS; i++){
-                Serial.print("$");
-                Serial.println(triggers[i].name());
-            }
-
-            Serial.print("$C");
-            Serial.println(N_SENSORS, DEC);
-            for (int i=0; i<N_SENSORS; i++){
-                Serial.print("$");
-                Serial.println(sensors[i].name());
-            }
-
-            Serial.print("$S");
-            Serial.println(N_SWITCHS, DEC);
-            for (int i=0; i<N_SWITCHS; i++){
-                Serial.print("$");
-                Serial.println(switchs[i].name());
-            }
-            break;
-
-        /* Set switch or ask for status */
-        case 'S':
-            while (! Serial.available());
-            c = Serial.read(); //switch id
-            while (! Serial.available());
-            d = Serial.read(); //switch status
-            if (c < N_SWITCHS){
-                switch (d){
-                    case 0: switchs[c].deactivate(); break;
-                    case 1: switchs[c].activate(); break;
-                }
-                Serial.print("S");
-                Serial.print(c, DEC);
-                Serial.println(switchs[c].isActive() ? "1" : "0");
-            }
-            break;
-
-        /* Upload animation */
-        case 'A':
-            while (! Serial.available());
-            c = Serial.read(); //anim id
-            while (! Serial.available());
-            d = Serial.read(); //number of frames
-
-            for (j=0; j<d; j++){
-                while (! Serial.available());
-                e = Serial.read();
-                if (c < N_ANIMATIONS)
-                    animations[c][j] = e;
-            }
-            if (c < N_ANIMATIONS)
-                animations[c].setLen(d);
-            Serial.print("A");
-            Serial.print(c, DEC);
-            Serial.print(":");
-            Serial.println(d, DEC);
-            break;
-
-        /* Animation settings */
-        case 'a':
-            while (! Serial.available());
-            c = Serial.read(); //anim id
-            while (! Serial.available());
-            d = Serial.read(); //request type {'l'(oop), 'p'(lay), 'd'(elay)}
-            while (! Serial.available());
-            e = Serial.read(); //param
-
-            if (c < N_ANIMATIONS){
-                switch (d){
-                    case 'l':
-                        if (e <= 1)
-                            animations[c].setLoop(e);
-                        Serial.print("a");
-                        Serial.print(c, DEC);
-                        Serial.println(animations[c].isLoop() ? ":l1" : ":l0");
-                        break;
-
-                    case 'p':
-                        if (e <= 1)
-                            animations[c].play(! e);
-                        Serial.print("a");
-                        Serial.print(c, DEC);
-                        Serial.println(animations[c].isPlaying() ? ":p1" : ":p0");
-                        break;
-
-                    case 'd':
-                        if (e > 0)
-                            animations[c].setDelay(e);
-                        Serial.print("a");
-                        Serial.print(c, DEC);
-                        Serial.print(":d");
-                        Serial.println(animations[c].getDelay(), DEC);
-                        break;
-                }
-            }
-            break;
-
-        /* Ask for trigger status */
-        case 'T':
-            while (! Serial.available());
-            c = Serial.read(); //trigger id
-            if (c < N_TRIGGERS){
-                Serial.print("T");
-                Serial.print(c, DEC);
-                Serial.println(triggers[c].isActive() ? "1" : "0");
-            }
-            break;
-
-        /* Ask for sensor value */
-        case 'C':
-            while (! Serial.available());
-            c = Serial.read(); //sensor id
-            if (c < N_SENSORS){
-                Serial.print("C");
-                Serial.print(c, DEC);
-                Serial.print(":");
-                Serial.println(sensors[c].getValue());
-            }
-            break;
+    msg.data[0] = SENSOR;
+    msg.len = 1;
+    msg.rid = N_SENSORS;
+    msg.write();
+    for (size_t i=0; i<N_SENSORS; i++){
+        strcpy((char*) msg.data+1, sensors[i].name());
+        msg.len = strlen(sensors[i].name());
+        msg.rid = i;
+        msg.write();
     }
 
+    msg.data[0] = SWITCH;
+    msg.len = 1;
+    msg.rid = N_SWITCHS;
+    msg.write();
+    for (size_t i=0; i<N_SWITCHS; i++){
+        strcpy((char*)msg.data+1, switchs[i].name());
+        msg.len = strlen(switchs[i].name());
+        msg.rid = i;
+        msg.write();
+    }
+
+    msg.data[0] = TRIGGER;
+    msg.len = 1;
+    msg.rid = N_TRIGGERS;
+    msg.write();
+    for (size_t i=0; i<N_TRIGGERS; i++){
+        strcpy((char*)msg.data+1, triggers[i].name());
+        msg.len = strlen(triggers[i].name());
+        msg.rid = i;
+        msg.write();
+    }
+
+    msg.data[0] = ANIMATION_FRAMES;
+    msg.len = 1;
+    msg.rid = N_ANIMATIONS;
+    msg.write();
+    for (size_t i=0; i<N_ANIMATIONS; i++){
+        strcpy((char*)msg.data+1, animations[i].name());
+        msg.len = strlen(animations[i].name());
+        msg.rid = i;
+        msg.write();
+    }
+}
+
+void HAL::com()
+{
+    msg.read();
+    if (! msg.is_valid())
+        return;
+
     last_com = millis();
+
+    if (msg.is(PING)){
+        lag = now - last_ping;
+        return;
+    }
+
+    else if (msg.is(TREE)){
+        tree();
+        return;
+    }
+
+    else if (msg.is(VERSION)){
+        msg.len = 40;
+        memcpy(&msg.data, VERSION_STR, 40);
+    }
+
+    else if (msg.is(SENSOR)){
+        if (msg.rid >= N_SENSORS)
+            return;
+        msg.len = 2;
+        unsigned int val = sensors[msg.rid].getValue();
+        msg.data[0] = (val>>8)&0xff;
+        msg.data[1] = val&0xff;
+    }
+
+    else if (msg.is(TRIGGER)){
+        if (msg.rid >= N_TRIGGERS)
+            return;
+        msg.len = 1;
+        msg.data[0] = triggers[msg.rid].isActive() ? 1 : 0;
+    }
+
+    else if (msg.is(SWITCH)){
+        if (msg.rid >= N_SWITCHS)
+            return;
+
+        if (msg.is(PARAM_CHANGE) && msg.len == 1){
+            if (msg.data[0]) switchs[msg.rid].activate();
+            else switchs[msg.rid].deactivate();
+        }
+
+        msg.len = 1;
+        msg.data[0] = switchs[msg.rid].isActive() ? 1 : 0;
+    }
+
+    else if (msg.rid < N_ANIMATIONS){
+        Animation & anim = animations[msg.rid];
+
+        if (msg.is(ANIMATION_FRAMES)){
+            anim.setLen(msg.len);
+            for (unsigned char i=0; i<msg.len; i++)
+                anim[i] = msg.data[i];
+            msg.len = 0;
+        }
+
+        else if (msg.is(ANIMATION_DELAY)){
+            if (msg.is(PARAM_CHANGE) && msg.len == 1)
+                anim.setDelay(msg.data[0]);
+            msg.len = 1;
+            msg.data[0] = anim.getDelay();
+        }
+
+        else if (msg.is(ANIMATION_PLAY)){
+            if (msg.is(PARAM_CHANGE) && msg.len == 1)
+                anim.play(msg.data[0] ? false : true);
+            msg.len = 1;
+            msg.data[0] = anim.isPlaying() ? 1 : 0;
+        }
+
+        else if (msg.is(ANIMATION_LOOP)){
+            if (msg.is(PARAM_CHANGE) && msg.len == 1)
+                anim.setLoop(msg.data[0] ? true : false);
+            msg.len = 1;
+            msg.data[0] = anim.isLoop() ? 1 : 0;
+        }
+    }
+
+    msg.write();
 }

@@ -2,6 +2,7 @@
 #define DEFINE_HAL_HEADER
 
 #include <Arduino.h>
+#include "HALMsg.h"
 
 class Resource {
     private:
@@ -95,7 +96,9 @@ class HAL {
         unsigned long int now, last_com, last_ping, lag;
         int j;
         unsigned char c, d, e;
+        HALMsg msg;
         void com();
+        void tree();
     public:
         HAL(
             size_t n_sens, Sensor *sens,
