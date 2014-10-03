@@ -39,6 +39,7 @@ void HAL::setup()
         animations[i].setLen(1);
         animations[i][0] = 0;
     }
+    while (! Serial.available());
 }
 
 void HAL::loop()
