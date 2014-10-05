@@ -82,7 +82,7 @@ bool HAL::ping_timeout() const
 void HAL::send_ping()
 {
     msg.reset();
-    msg.cmd = PING;
+    msg.cmd = HAL_PING;
     msg.len = 0;
     msg.rid = 0;
     msg.write();
@@ -160,7 +160,7 @@ void HAL::com()
     }
 
     last_com = millis();
-    if (msg.is(PING)){
+    if (msg.is(HAL_PING)){
         lag = now - last_ping;
         return;
     }

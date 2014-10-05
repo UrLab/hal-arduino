@@ -3,7 +3,7 @@
 
 typedef enum {
     BOOT='#',
-    PING='*',
+    HAL_PING='*',
     VERSION='?',
     TREE='$',
 
