@@ -31,7 +31,7 @@ class Trigger : public Resource {
         bool isActive() const;
         void check();
         void hit(int state);
-        void notification(const char *state);
+        void notification() const;
 };
 
 class Switch : public Resource {

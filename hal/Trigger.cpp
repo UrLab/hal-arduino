@@ -25,11 +25,14 @@ void Trigger::check()
 }
 
 
-void Trigger::notification(const char *state)
+void Trigger::notification() const
 {
-    Serial.print("!");
-    Serial.print(id(), DEC);
-    Serial.println(state);
+    HALMsg msg;
+    msg.cmd = TRIGGER|PARAM_CHANGE;
+    msg.rid = id();
+    msg.len = 1;
+    msg.data[0] = _active;
+    msg.write();
 }
 
 
@@ -39,13 +42,13 @@ void Trigger::hit(int state)
         _cursor++;
         if (_cursor == _state_count && ! _active){
             _active = true;
-            notification("1");
+            notification();
         }
     } else if (state != _active_state && _cursor > 0){
         _cursor--;
         if (_cursor == 0 && _active){
             _active = false;
-            notification("0");
+            notification();
         }
     }
 }
