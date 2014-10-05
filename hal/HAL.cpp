@@ -199,6 +199,7 @@ void HAL::com()
         if (msg.change() && msg.len == 1){
             if (msg.data[0]) switchs[msg.rid].activate();
             else switchs[msg.rid].deactivate();
+            msg.cmd = SWITCH;
         }
 
         msg.len = 1;
