@@ -2,6 +2,7 @@
 #define DEFINE_HALMSG_HEADER
 
 typedef enum {
+    BOOT='#',
     PING='*',
     VERSION='?',
     TREE='$',
@@ -14,8 +15,8 @@ typedef enum {
     ANIMATION_LOOP='L',
     ANIMATION_PLAY='P',
 
-    PARAM_CHANGE=0x20,
-    PARAM_ASK=0
+    PARAM_CHANGE=0x80,
+    PARAM_ASK=0x00
 } HALCommand;
 
 class HALMsg {
@@ -28,11 +29,14 @@ class HALMsg {
         unsigned char data[255]; //!< Command data, if any
 
         bool is(HALCommand type) const;
+        bool change() const;
         void read(unsigned long int timeout_ms=500);
         void write();
         bool is_valid() const;
 
         unsigned char compute_checksum() const;
+
+        void reset();
 };
 
 #endif

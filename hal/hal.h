@@ -99,6 +99,8 @@ class HAL {
         HALMsg msg;
         void com();
         void tree();
+        void send_ping();
+        void send_version();
     public:
         HAL(
             size_t n_sens, Sensor *sens,

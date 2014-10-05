@@ -1,6 +1,6 @@
 #include "hal.h"
 
-#define VERSION_STR "?0123456789abcdef0123456789abcdef01234567"
+#define VERSION_STR "0123456789abcdef0123456789abcdef01234567"
 
 static inline unsigned char HALMsg_checksum(HALMsg *msg)
 {
@@ -39,21 +39,27 @@ void HAL::setup()
         animations[i].setLen(1);
         animations[i][0] = 0;
     }
-    while (! Serial.available());
+
+    msg.cmd = BOOT;
+    msg.len = 0;
+    msg.rid = 0;
+    msg.write();
+
+    last_ping = millis();
 }
 
 void HAL::loop()
 {
     now = millis();
 
-    /* Ping every second if no communication within last 750ms */
-    if (now - last_com > 750 && now - last_ping > 1000){
-        Serial.println("*");
-        last_ping = now;
-    }
-
     if (Serial.available())
         com();
+
+    /* Ping every second if no communication within last 750ms */
+    if (now - last_com > 750 && now - last_ping > 1000){
+        send_ping();
+        last_ping = now;
+    }
 
     for (int i=0; i<N_TRIGGERS; i++)
         triggers[i].check();
@@ -73,6 +79,15 @@ bool HAL::ping_timeout() const
     return (last_com_delay() > 2500);
 }
 
+void HAL::send_ping()
+{
+    msg.reset();
+    msg.cmd = PING;
+    msg.len = 0;
+    msg.rid = 0;
+    msg.write();
+}
+
 void HAL::tree()
 {
     size_t l;
@@ -83,7 +98,7 @@ void HAL::tree()
     msg.rid = N_SENSORS;
     msg.write();
     for (size_t i=0; i<N_SENSORS; i++){
-        strcpy((char*) msg.data+1, sensors[i].name());
+        strcpy((char*) msg.data, sensors[i].name());
         msg.len = strlen(sensors[i].name());
         msg.rid = i;
         msg.write();
@@ -94,7 +109,7 @@ void HAL::tree()
     msg.rid = N_SWITCHS;
     msg.write();
     for (size_t i=0; i<N_SWITCHS; i++){
-        strcpy((char*)msg.data+1, switchs[i].name());
+        strcpy((char*)msg.data, switchs[i].name());
         msg.len = strlen(switchs[i].name());
         msg.rid = i;
         msg.write();
@@ -105,7 +120,7 @@ void HAL::tree()
     msg.rid = N_TRIGGERS;
     msg.write();
     for (size_t i=0; i<N_TRIGGERS; i++){
-        strcpy((char*)msg.data+1, triggers[i].name());
+        strcpy((char*)msg.data, triggers[i].name());
         msg.len = strlen(triggers[i].name());
         msg.rid = i;
         msg.write();
@@ -116,21 +131,35 @@ void HAL::tree()
     msg.rid = N_ANIMATIONS;
     msg.write();
     for (size_t i=0; i<N_ANIMATIONS; i++){
-        strcpy((char*)msg.data+1, animations[i].name());
+        strcpy((char*)msg.data, animations[i].name());
         msg.len = strlen(animations[i].name());
         msg.rid = i;
         msg.write();
     }
 }
 
+void HAL::send_version()
+{
+    msg.reset();
+    msg.cmd = VERSION;
+    msg.rid = 0;
+    msg.len = 40;
+    strcpy((char*) msg.data, VERSION_STR);
+    msg.write();
+}
+
+#define error() Serial.print("!\x00\x00!")
+
 void HAL::com()
 {
+    msg.reset();
     msg.read();
-    if (! msg.is_valid())
+    if (! msg.is_valid()){
+        error();
         return;
+    }
 
     last_com = millis();
-
     if (msg.is(PING)){
         lag = now - last_ping;
         return;
@@ -142,8 +171,8 @@ void HAL::com()
     }
 
     else if (msg.is(VERSION)){
-        msg.len = 40;
-        memcpy(&msg.data, VERSION_STR, 40);
+        send_version();
+        return;
     }
 
     else if (msg.is(SENSOR)){
@@ -160,13 +189,14 @@ void HAL::com()
             return;
         msg.len = 1;
         msg.data[0] = triggers[msg.rid].isActive() ? 1 : 0;
+        msg.write();
     }
 
     else if (msg.is(SWITCH)){
         if (msg.rid >= N_SWITCHS)
             return;
 
-        if (msg.is(PARAM_CHANGE) && msg.len == 1){
+        if (msg.change() && msg.len == 1){
             if (msg.data[0]) switchs[msg.rid].activate();
             else switchs[msg.rid].deactivate();
         }
@@ -186,22 +216,28 @@ void HAL::com()
         }
 
         else if (msg.is(ANIMATION_DELAY)){
-            if (msg.is(PARAM_CHANGE) && msg.len == 1)
+            if (msg.change() && msg.len == 1){
                 anim.setDelay(msg.data[0]);
+                msg.cmd = ANIMATION_DELAY;
+            }
             msg.len = 1;
             msg.data[0] = anim.getDelay();
         }
 
         else if (msg.is(ANIMATION_PLAY)){
-            if (msg.is(PARAM_CHANGE) && msg.len == 1)
+            if (msg.change() && msg.len == 1){
                 anim.play(msg.data[0] ? false : true);
+                msg.cmd = ANIMATION_PLAY;
+            }
             msg.len = 1;
             msg.data[0] = anim.isPlaying() ? 1 : 0;
         }
 
         else if (msg.is(ANIMATION_LOOP)){
-            if (msg.is(PARAM_CHANGE) && msg.len == 1)
+            if (msg.change() && msg.len == 1){
                 anim.setLoop(msg.data[0] ? true : false);
+                msg.cmd = ANIMATION_LOOP;
+            }
             msg.len = 1;
             msg.data[0] = anim.isLoop() ? 1 : 0;
         }
