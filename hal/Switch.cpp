@@ -1,19 +1,27 @@
 #include "hal.h"
 
-Switch::Switch(const char *name, int pin) : 
-    Resource(name, pin), _state(LOW)
+Switch::Switch(const char *name, int pin, unsigned long int min_delay) :
+    Resource(name, pin), _state(LOW), _min_delay(min_delay), _last_change(0)
 {
     pinMode(pin, OUTPUT);
 }
 
 void Switch::activate()
 {
-    _state = HIGH;
+    unsigned long int now = millis();
+    if (now - _last_change > _min_delay){
+        _state = HIGH;
+        _last_change = now;
+    }
 }
 
 void Switch::deactivate()
 {
-    _state = LOW;
+    unsigned long int now = millis();
+    if (now - _last_change > _min_delay){
+        _state = LOW;
+        _last_change = now;
+    }
 }
 
 bool Switch::isActive() const

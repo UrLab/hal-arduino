@@ -37,8 +37,13 @@ class Trigger : public Resource {
 class Switch : public Resource {
     private:
         int _state;
+        unsigned long int _min_delay, _last_change;
     public:
-        explicit Switch(const char *name, int pin);
+        explicit Switch(
+            const char *name,
+            int pin,
+            unsigned long int min_delay=1000
+        );
         void activate();
         void deactivate();
         bool isActive() const;
