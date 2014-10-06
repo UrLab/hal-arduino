@@ -148,16 +148,12 @@ void HAL::send_version()
     msg.write();
 }
 
-#define error() Serial.print("!\x00\x00!")
-
 void HAL::com()
 {
     msg.reset();
     msg.read();
-    if (! msg.is_valid()){
-        error();
+    if (! msg.is_valid())
         return;
-    }
 
     last_com = millis();
     if (msg.is(HAL_PING)){
