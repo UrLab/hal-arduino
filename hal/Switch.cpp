@@ -17,11 +17,8 @@ void Switch::activate()
 
 void Switch::deactivate()
 {
-    unsigned long int now = millis();
-    if (now - _last_change > _min_delay){
-        _state = LOW;
-        _last_change = now;
-    }
+    _state = LOW;
+    _last_change = now;
 }
 
 bool Switch::isActive() const
