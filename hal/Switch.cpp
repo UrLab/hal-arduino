@@ -18,7 +18,7 @@ void Switch::activate()
 void Switch::deactivate()
 {
     _state = LOW;
-    _last_change = now;
+    _last_change = millis();
 }
 
 bool Switch::isActive() const
