@@ -2,17 +2,6 @@
 
 #define VERSION_STR "0123456789abcdef0123456789abcdef01234567"
 
-static inline unsigned char HALMsg_checksum(HALMsg *msg)
-{
-    unsigned char res = 0;
-    res += msg->cmd;
-    res += msg->rid;
-    res += msg->len;
-    for (unsigned char i=0; i<msg->len; i++)
-        res += msg->data[i];
-    return res;
-}
-
 HAL::HAL(
     size_t n_sens, Sensor *sens,
     size_t n_trig, Trigger *trig,
@@ -52,8 +41,9 @@ void HAL::loop()
 {
     now = millis();
 
-    if (Serial.available())
+    if (Serial.available()){
         com();
+    }
 
     /* Ping every second if no communication within last 750ms */
     if (now - last_com > 750 && now - last_ping > 1000){
@@ -81,8 +71,8 @@ bool HAL::ping_timeout() const
 
 void HAL::send_ping()
 {
-    msg.reset();
-    msg.cmd = HAL_PING;
+    msg.clear();
+    msg.cmd = PING;
     msg.len = 0;
     msg.rid = 0;
     msg.write();
@@ -140,59 +130,59 @@ void HAL::tree()
 
 void HAL::send_version()
 {
-    msg.reset();
-    msg.cmd = VERSION;
-    msg.rid = 0;
-    msg.len = 40;
-    strcpy((char*) msg.data, VERSION_STR);
-    msg.write();
+    msg.clear();
+    
 }
 
 void HAL::com()
 {
-    msg.reset();
+    msg.clear();
     msg.read();
-    if (! msg.is_valid())
+    if (msg.checksum() != msg.chk)
         return;
 
     last_com = millis();
-    if (msg.is(HAL_PING)){
+    if (msg.type() == PING){
         lag = now - last_ping;
         return;
     }
 
-    else if (msg.is(TREE)){
+    else if (msg.type() == TREE){
         tree();
         return;
     }
 
-    else if (msg.is(VERSION)){
-        send_version();
-        return;
+    else if (msg.type() == VERSION){
+        msg.cmd = VERSION|PARAM_CHANGE;
+        msg.rid = 0;
+        msg.len = 40;
+        strcpy((char*) msg.data, VERSION_STR);
+        msg.reply();
     }
 
-    else if (msg.is(SENSOR)){
+    else if (msg.type() == SENSOR){
         if (msg.rid >= N_SENSORS)
             return;
         msg.len = 2;
         unsigned int val = sensors[msg.rid].getValue();
         msg.data[0] = (val>>8)&0xff;
         msg.data[1] = val&0xff;
+        msg.reply();
     }
 
-    else if (msg.is(TRIGGER)){
+    else if (msg.type() == TRIGGER){
         if (msg.rid >= N_TRIGGERS)
             return;
         msg.len = 1;
         msg.data[0] = triggers[msg.rid].isActive() ? 1 : 0;
-        msg.write();
+        msg.reply();
     }
 
-    else if (msg.is(SWITCH)){
+    else if (msg.type() == SWITCH){
         if (msg.rid >= N_SWITCHS)
             return;
 
-        if (msg.change() && msg.len == 1){
+        if (msg.is_change() && msg.len == 1){
             if (msg.data[0]) switchs[msg.rid].activate();
             else switchs[msg.rid].deactivate();
             msg.cmd = SWITCH;
@@ -200,20 +190,29 @@ void HAL::com()
 
         msg.len = 1;
         msg.data[0] = switchs[msg.rid].isActive() ? 1 : 0;
+        msg.reply();
     }
 
     else if (msg.rid < N_ANIMATIONS){
         Animation & anim = animations[msg.rid];
 
-        if (msg.is(ANIMATION_FRAMES)){
-            anim.setLen(msg.len);
-            for (unsigned char i=0; i<msg.len; i++)
-                anim[i] = msg.data[i];
-            msg.len = 0;
+        if (msg.type() == ANIMATION_FRAMES){
+            if (msg.is_change()){
+                anim.setLen(msg.len);
+                for (unsigned char i=0; i<msg.len; i++){
+                    anim[i] = msg.data[i];
+                }
+                msg.len = 0;
+            } else {
+                msg.len = anim.getLen();
+                for (unsigned char i=0; i<msg.len; i++){
+                    msg.data[i] = anim[i];
+                }
+            }
         }
 
-        else if (msg.is(ANIMATION_DELAY)){
-            if (msg.change() && msg.len == 1){
+        else if (msg.type() == ANIMATION_DELAY){
+            if (msg.is_change() && msg.len == 1){
                 anim.setDelay(msg.data[0]);
                 msg.cmd = ANIMATION_DELAY;
             }
@@ -221,8 +220,8 @@ void HAL::com()
             msg.data[0] = anim.getDelay();
         }
 
-        else if (msg.is(ANIMATION_PLAY)){
-            if (msg.change() && msg.len == 1){
+        else if (msg.type() == ANIMATION_PLAY){
+            if (msg.is_change() && msg.len == 1){
                 anim.play(msg.data[0] ? false : true);
                 msg.cmd = ANIMATION_PLAY;
             }
@@ -230,15 +229,14 @@ void HAL::com()
             msg.data[0] = anim.isPlaying() ? 1 : 0;
         }
 
-        else if (msg.is(ANIMATION_LOOP)){
-            if (msg.change() && msg.len == 1){
+        else if (msg.type() == ANIMATION_LOOP){
+            if (msg.is_change() && msg.len == 1){
                 anim.setLoop(msg.data[0] ? true : false);
                 msg.cmd = ANIMATION_LOOP;
             }
             msg.len = 1;
             msg.data[0] = anim.isLoop() ? 1 : 0;
         }
+        msg.reply();
     }
-
-    msg.write();
 }

@@ -27,7 +27,7 @@ void Trigger::check()
 
 void Trigger::notification() const
 {
-    HALMsg msg;
+    HALMsg_t<1> msg;
     msg.cmd = TRIGGER|PARAM_CHANGE;
     msg.rid = id();
     msg.len = 1;
@@ -44,7 +44,8 @@ void Trigger::hit(int state)
             _active = true;
             notification();
         }
-    } else if (state != _active_state && _cursor > 0){
+    } 
+    else if (state != _active_state && _cursor > 0){
         _cursor--;
         if (_cursor == 0 && _active){
             _active = false;
