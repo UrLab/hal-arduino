@@ -21,7 +21,7 @@ void write_byte(unsigned char c);
 
 typedef enum {
     BOOT='#',
-    PING='*',
+    HAL_PING='*',
     VERSION='?',
     TREE='$',
 
