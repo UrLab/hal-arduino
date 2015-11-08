@@ -11,7 +11,7 @@ unsigned char next_seq()
 unsigned char read_byte()
 {
     waitSerial();
-    char c = Serial.read();
+    unsigned char c = Serial.read();
     if (c == ESC){
         waitSerial();
         c = Serial.read();

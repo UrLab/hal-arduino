@@ -37,7 +37,7 @@ typedef enum {
     PARAM_ASK=0x00
 } HALCommand;
 
-#define waitSerial() for (int i=0; i<1000 && ! Serial.available(); i++)
+#define waitSerial() for (int i=0; i<100 && ! Serial.available(); i++)
 
 template <unsigned char datalen>
 struct HALMsg_t {
