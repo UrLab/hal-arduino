@@ -18,6 +18,7 @@ Animation::Animation(const char *name, int pin, bool is_buzzer) :
 {
     memset(_frames, 0, sizeof(_frames));
     pinMode(pin, OUTPUT);
+    setLen(1);
 }
 
 unsigned char Animation::getLen() const {return _len;}

@@ -14,6 +14,7 @@ class Resource {
         void setID(int id);
         int id() const;
         int pin() const;
+        void declare(HALMsg & msg) const;
 };
 
 class Trigger : public Resource {

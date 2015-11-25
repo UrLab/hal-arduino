@@ -24,10 +24,6 @@ void HAL::setup()
     }
 
     Serial.begin(115200);
-    for (int i=0; i<N_ANIMATIONS; i++){
-        animations[i].setLen(1);
-        animations[i][0] = 0;
-    }
 
     msg.cmd = BOOT;
     msg.len = 0;
@@ -80,7 +76,7 @@ void HAL::send_ping()
 
 void HAL::tree()
 {
-    size_t l;
+    size_t i, l;
     msg.cmd = TREE;
 
     msg.data[0] = SENSOR;
@@ -88,43 +84,31 @@ void HAL::tree()
     msg.rid = N_SENSORS;
     msg.write();
     for (size_t i=0; i<N_SENSORS; i++){
-        strcpy((char*) msg.data, sensors[i].name());
-        msg.len = strlen(sensors[i].name());
-        msg.rid = i;
-        msg.write();
+        sensors[i].declare(msg);
     }
 
     msg.data[0] = SWITCH;
     msg.len = 1;
     msg.rid = N_SWITCHS;
     msg.write();
-    for (size_t i=0; i<N_SWITCHS; i++){
-        strcpy((char*)msg.data, switchs[i].name());
-        msg.len = strlen(switchs[i].name());
-        msg.rid = i;
-        msg.write();
+    for (i=0; i<N_SWITCHS; i++){
+        switchs[i].declare(msg);
     }
 
     msg.data[0] = TRIGGER;
     msg.len = 1;
     msg.rid = N_TRIGGERS;
     msg.write();
-    for (size_t i=0; i<N_TRIGGERS; i++){
-        strcpy((char*)msg.data, triggers[i].name());
-        msg.len = strlen(triggers[i].name());
-        msg.rid = i;
-        msg.write();
+    for (i=0; i<N_TRIGGERS; i++){
+        triggers[i].declare(msg);
     }
 
     msg.data[0] = ANIMATION_FRAMES;
     msg.len = 1;
     msg.rid = N_ANIMATIONS;
     msg.write();
-    for (size_t i=0; i<N_ANIMATIONS; i++){
-        strcpy((char*)msg.data, animations[i].name());
-        msg.len = strlen(animations[i].name());
-        msg.rid = i;
-        msg.write();
+    for (i=0; i<N_ANIMATIONS; i++){
+        animations[i].declare(msg);
     }
 }
 
