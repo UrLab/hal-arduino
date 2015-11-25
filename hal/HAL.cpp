@@ -6,12 +6,13 @@ HAL::HAL(
     size_t n_sens, Sensor *sens,
     size_t n_trig, Trigger *trig,
     size_t n_switch, Switch *sw,
-    size_t n_anim, Animation *anim
+    size_t n_anim, Animation *anim,
+    size_t n_rgbs, Rgb *led_rgbs
 ) :
     N_SENSORS(n_sens), N_TRIGGERS(n_trig), N_SWITCHS(n_switch), 
-    N_ANIMATIONS(n_anim), sensors(sens), triggers(trig), switchs(sw),
-    animations(anim), now(0), last_com(0), last_ping(0), lag(0), j(0), c(0), 
-    d(0), e(0)
+    N_ANIMATIONS(n_anim), N_RGBS(n_rgbs), sensors(sens), triggers(trig),
+    switchs(sw), animations(anim), rgbs(led_rgbs), now(0), last_com(0),
+    last_ping(0), lag(0), j(0), c(0), d(0), e(0)
 {}
 
 void HAL::setup()
@@ -21,6 +22,7 @@ void HAL::setup()
         if (i<N_SENSORS) sensors[i].setID(i);
         if (i<N_TRIGGERS) triggers[i].setID(i);
         if (i<N_SWITCHS) switchs[i].setID(i);
+        if (i<N_RGBS) rgbs[i].setID(i);
     }
 
     Serial.begin(115200);
@@ -53,6 +55,8 @@ void HAL::loop()
         animations[i].run(now);
     for (int i=0; i<N_SWITCHS; i++)
         switchs[i].writeVal();
+    for (int i=0; i<N_RGBS; i++)
+        rgbs[i].writeColor();
 }
 
 long unsigned int HAL::last_com_delay() const
@@ -109,6 +113,14 @@ void HAL::tree()
     msg.write();
     for (i=0; i<N_ANIMATIONS; i++){
         animations[i].declare(msg);
+    }
+
+    msg.data[0] = RGB;
+    msg.len = 1;
+    msg.rid = N_RGBS;
+    msg.write();
+    for (i=0; i<N_RGBS; i++){
+        rgbs[i].declare(msg);
     }
 }
 
@@ -174,6 +186,20 @@ void HAL::com()
 
         msg.len = 1;
         msg.data[0] = switchs[msg.rid].isActive() ? 1 : 0;
+        msg.reply();
+    }
+
+    else if (msg.type() == RGB){
+        if (msg.rid >= N_RGBS)
+            return;
+
+        if (msg.is_change() && msg.len == 3){
+            rgbs[msg.rid].setColor(msg.data[0], msg.data[1], msg.data[2]);
+            msg.cmd = RGB;
+        }
+
+        msg.len = 3;
+        rgbs[msg.rid].getColor(msg.data);
         msg.reply();
     }
 

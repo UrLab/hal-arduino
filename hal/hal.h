@@ -85,20 +85,33 @@ class Sensor : public Resource {
         unsigned int getValue() const;
 };
 
+class Rgb : public Resource {
+    private:
+        bool _has_pwm;
+        unsigned char _color[3];
+        int _pin_g, _pin_b;
+    public:
+        explicit Rgb(const char *name, bool pwm, int pin_r, int pin_g, int pin_b);
+        void setColor(unsigned char r, unsigned char g, unsigned char b);
+        void writeColor() const;
+        void getColor(unsigned char *rgb) const;
+};
 
-#define HAL_CREATE(name, sensors, triggers, switchs, anims)\
+#define HAL_CREATE(name, sensors, triggers, switchs, anims, rgbs)\
 HAL name(sizeof(sensors)/sizeof(Sensor), sensors,\
     sizeof(triggers)/sizeof(Trigger), triggers,\
     sizeof(switchs)/sizeof(Switch), switchs,\
-    sizeof(anims)/sizeof(Animation), anims)
+    sizeof(anims)/sizeof(Animation), anims,\
+    sizeof(rgbs)/sizeof(Rgb), rgbs)
 
 class HAL {
     private:
-        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS;
+        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS, N_RGBS;
         Sensor *sensors;
         Trigger *triggers;
         Switch *switchs;
         Animation *animations;
+        Rgb *rgbs;
         unsigned long int now, last_com, last_ping, lag;
         int j;
         unsigned char c, d, e;
@@ -112,7 +125,8 @@ class HAL {
             size_t n_sens, Sensor *sens,
             size_t n_trigs, Trigger *trigs,
             size_t n_switchs, Switch *sw,
-            size_t n_anim, Animation *anims
+            size_t n_anim, Animation *anims,
+            size_t n_rgbs, Rgb *rgbs
         );
         void setup();
         void loop();
