@@ -7,11 +7,12 @@ HAL::HAL(
     size_t n_trig, Trigger *trig,
     size_t n_switch, Switch *sw,
     size_t n_anim, Animation *anim,
-    size_t n_rgbs, Rgb *led_rgbs
+    size_t n_rgbs, Rgb *led_rgbs,
+    size_t n_DHTsens, DHTSensor *DHTSens
 ) :
     N_SENSORS(n_sens), N_TRIGGERS(n_trig), N_SWITCHS(n_switch), 
-    N_ANIMATIONS(n_anim), N_RGBS(n_rgbs), sensors(sens), triggers(trig),
-    switchs(sw), animations(anim), rgbs(led_rgbs), now(0), last_com(0),
+    N_ANIMATIONS(n_anim), N_RGBS(n_rgbs), N_DHTSENSORS(n_DHTsens), sensors(sens), triggers(trig),
+    switchs(sw), animations(anim), rgbs(led_rgbs), DHTSensors(DHTSens), now(0), last_com(0),
     last_ping(0), lag(0), j(0), c(0), d(0), e(0)
 {}
 
@@ -23,6 +24,7 @@ void HAL::setup()
         if (i<N_TRIGGERS) triggers[i].setID(i);
         if (i<N_SWITCHS) switchs[i].setID(i);
         if (i<N_RGBS) rgbs[i].setID(i);
+        if (i<N_DHTSENSORS) DHTSensors[i].setID(i);
     }
 
     Serial.begin(115200);
@@ -90,6 +92,14 @@ void HAL::tree()
     for (size_t i=0; i<N_SENSORS; i++){
         sensors[i].declare(msg);
     }
+    msg.data[0] = DHTSENSOR;
+    msg.len = 1;
+    msg.rid = N_DHTSENSORS;
+    msg.write();
+    for (size_t i=0; i<N_DHTSENSORS; i++){
+        DHTSensors[i].declare(msg);
+    }
+
 
     msg.data[0] = SWITCH;
     msg.len = 1;
@@ -161,6 +171,16 @@ void HAL::com()
             return;
         msg.len = 2;
         unsigned int val = sensors[msg.rid].getValue();
+        msg.data[0] = (val>>8)&0xff;
+        msg.data[1] = val&0xff;
+        msg.reply();
+    }
+
+    else if (msg.type() == DHTSENSOR){
+        if (msg.rid >= N_DHTSENSORS)
+            return;
+        msg.len = 2;
+        unsigned int val = DHTSensors[msg.rid].getValue();
         msg.data[0] = (val>>8)&0xff;
         msg.data[1] = val&0xff;
         msg.reply();

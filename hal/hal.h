@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "HALMsg.h"
+#include "DHT.h"
 
 class Resource {
     private:
@@ -97,21 +98,32 @@ class Rgb : public Resource {
         void getColor(unsigned char *rgb) const;
 };
 
-#define HAL_CREATE(name, sensors, triggers, switchs, anims, rgbs)\
+class DHTSensor : public Resource {
+    private:
+        DHT _dht;
+        bool _type;
+    public:
+        explicit DHTSensor(const char *name, DHT dht, bool type, int pin);
+        unsigned int getValue();
+};
+
+#define HAL_CREATE(name, sensors, triggers, switchs, anims, rgbs, DHTSensors)\
 HAL name(sizeof(sensors)/sizeof(Sensor), sensors,\
     sizeof(triggers)/sizeof(Trigger), triggers,\
     sizeof(switchs)/sizeof(Switch), switchs,\
     sizeof(anims)/sizeof(Animation), anims,\
-    sizeof(rgbs)/sizeof(Rgb), rgbs)
+    sizeof(rgbs)/sizeof(Rgb), rgbs,\
+    sizeof(DHTSensors)/sizeof(DHTSensor), DHTSensors)
 
 class HAL {
     private:
-        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS, N_RGBS;
+        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS, N_RGBS, N_DHTSENSORS;
         Sensor *sensors;
         Trigger *triggers;
         Switch *switchs;
         Animation *animations;
         Rgb *rgbs;
+        DHTSensor *DHTSensors;
         unsigned long int now, last_com, last_ping, lag;
         int j;
         unsigned char c, d, e;
@@ -126,7 +138,8 @@ class HAL {
             size_t n_trigs, Trigger *trigs,
             size_t n_switchs, Switch *sw,
             size_t n_anim, Animation *anims,
-            size_t n_rgbs, Rgb *rgbs
+            size_t n_rgbs, Rgb *rgbs,
+            size_t n_DHTsens, DHTSensor *DHTSens
         );
         void setup();
         void loop();
