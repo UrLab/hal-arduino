@@ -34,6 +34,8 @@ written by Adafruit Industries
 #define DHT21 21
 #define AM2301 21
 
+#define TEMPERATURE false
+#define HUMIDITY true
 
 class DHT {
   public:
