@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "HALMsg.h"
 #include "DHT.h"
+#include <Servo.h>
 
 class Resource {
     private:
@@ -106,24 +107,34 @@ class DHTSensor : public Resource {
         explicit DHTSensor(const char *name, DHT dht, bool type, int pin);
         unsigned int getValue();
 };
+class ServoAnim : public Resource {
+    private:
+        Servo _servo;
+    public:
+        explicit ServoAnim(const char *name, int pin);
+        void write(unsigned char val);
+        unsigned char read();
+};
 
-#define HAL_CREATE(name, sensors, triggers, switchs, anims, rgbs, DHTSensors)\
+#define HAL_CREATE(name, sensors, triggers, switchs, anims, rgbs, DHTSensors, servosAnim)\
 HAL name(sizeof(sensors)/sizeof(Sensor), sensors,\
     sizeof(triggers)/sizeof(Trigger), triggers,\
     sizeof(switchs)/sizeof(Switch), switchs,\
     sizeof(anims)/sizeof(Animation), anims,\
     sizeof(rgbs)/sizeof(Rgb), rgbs,\
-    sizeof(DHTSensors)/sizeof(DHTSensor), DHTSensors)
+    sizeof(DHTSensors)/sizeof(DHTSensor), DHTSensors,\
+    sizeof(servosAnim)/sizeof(ServoAnim), servosAnim)
 
 class HAL {
     private:
-        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS, N_RGBS, N_DHTSENSORS;
+        size_t N_SENSORS, N_TRIGGERS, N_SWITCHS, N_ANIMATIONS, N_RGBS, N_DHTSENSORS, N_SERVOSANIM;
         Sensor *sensors;
         Trigger *triggers;
         Switch *switchs;
         Animation *animations;
         Rgb *rgbs;
         DHTSensor *DHTSensors;
+        ServoAnim *servosAnim;
         unsigned long int now, last_com, last_ping, lag;
         int j;
         unsigned char c, d, e;
@@ -139,7 +150,8 @@ class HAL {
             size_t n_switchs, Switch *sw,
             size_t n_anim, Animation *anims,
             size_t n_rgbs, Rgb *rgbs,
-            size_t n_DHTsens, DHTSensor *DHTSens
+            size_t n_DHTsens, DHTSensor *DHTSens,
+            size_t n_srvs, ServoAnim *servosAnim
         );
         void setup();
         void loop();

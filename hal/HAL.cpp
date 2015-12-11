@@ -8,11 +8,12 @@ HAL::HAL(
     size_t n_switch, Switch *sw,
     size_t n_anim, Animation *anim,
     size_t n_rgbs, Rgb *led_rgbs,
-    size_t n_DHTsens, DHTSensor *DHTSens
+    size_t n_DHTsens, DHTSensor *DHTSens,
+    size_t n_srvs, ServoAnim *servosAnim
 ) :
     N_SENSORS(n_sens), N_TRIGGERS(n_trig), N_SWITCHS(n_switch), 
-    N_ANIMATIONS(n_anim), N_RGBS(n_rgbs), N_DHTSENSORS(n_DHTsens), sensors(sens), triggers(trig),
-    switchs(sw), animations(anim), rgbs(led_rgbs), DHTSensors(DHTSens), now(0), last_com(0),
+    N_ANIMATIONS(n_anim), N_RGBS(n_rgbs), N_DHTSENSORS(n_DHTsens), N_SERVOSANIM(n_srvs), sensors(sens), triggers(trig),
+    switchs(sw), animations(anim), rgbs(led_rgbs), DHTSensors(DHTSens), servosAnim(servosAnim), now(0), last_com(0),
     last_ping(0), lag(0), j(0), c(0), d(0), e(0)
 {}
 
@@ -25,6 +26,7 @@ void HAL::setup()
         if (i<N_SWITCHS) switchs[i].setID(i);
         if (i<N_RGBS) rgbs[i].setID(i);
         if (i<N_DHTSENSORS) DHTSensors[i].setID(i);
+        if (i<N_SERVOSANIM) servosAnim[i].setID(i);
     }
 
     Serial.begin(115200);
@@ -100,6 +102,14 @@ void HAL::tree()
         DHTSensors[i].declare(msg);
     }
 
+    msg.data[0] = SERVO;
+    msg.len = 1;
+    msg.rid = N_SERVOSANIM;
+    msg.write();
+    for (size_t i=0; i<N_SERVOSANIM; i++){
+        servosAnim[i].declare(msg);
+    }
+
 
     msg.data[0] = SWITCH;
     msg.len = 1;
@@ -117,7 +127,7 @@ void HAL::tree()
         triggers[i].declare(msg);
     }
 
-    msg.data[0] = ANIMATION_FRAMES;
+    msg.data[0] = 'F';
     msg.len = 1;
     msg.rid = N_ANIMATIONS;
     msg.write();
@@ -183,6 +193,18 @@ void HAL::com()
         unsigned int val = DHTSensors[msg.rid].getValue();
         msg.data[0] = (val>>8)&0xff;
         msg.data[1] = val&0xff;
+        msg.reply();
+    }
+
+    else if (msg.type() == SERVO){
+        if (msg.rid >= N_SERVOSANIM)
+            return;
+        if (msg.is_change() && msg.len == 1){
+            servosAnim[msg.rid].write(msg.data[0]);
+            msg.cmd = SERVO;
+        }
+        msg.len = 1;
+        msg.data[0] = servosAnim[msg.rid].read();
         msg.reply();
     }
 
