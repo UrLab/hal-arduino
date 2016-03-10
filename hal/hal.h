@@ -54,7 +54,7 @@ class Switch : public Resource {
 
 class Animation : public Resource {
     private:
-        unsigned char _frames[255];
+        unsigned char _frames[127];
         unsigned char _len, _i;
         bool _loop, _play;
         unsigned int _delay;
